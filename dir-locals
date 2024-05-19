@@ -1,0 +1,7 @@
+(defun run-my-guile-project ()
+  "Run the main Scheme script of my project."
+  (interactive)
+  (let ((default-directory "/home/roberto/src/guilegame"))
+    (compile "guile src/main.scm")))  ; Assumes 'main.scm' is the entry point
+
+(global-set-key (kbd "<f5>") 'run-my-guile-project)
