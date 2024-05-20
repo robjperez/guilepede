@@ -56,7 +56,7 @@
               (loop positions)
               (loop (cons new-pos positions)))))))
 ;; Generate 20 unique random positions
-(define random-positions (generate-random-positions (* grid-width grid-height) 40))
+(define random-positions (generate-random-positions (* grid-width grid-height) 10))
 
 ;; Fill the array with #t in the random positions
 (for-each (lambda (pos)
@@ -66,7 +66,16 @@
           random-positions)
 
 ;; Define enemies
-(define enemy-trains (list (vector 5 DIRECTION-R 0 0)))
+(define enemies
+  (list
+   (vector DIRECTION-R 0 0)
+   (vector DIRECTION-R 16 0)
+   (vector DIRECTION-R 32 0)
+   (vector DIRECTION-R 48 0)
+   (vector DIRECTION-R 64 0)))
+
+(define (enemy-get-x enemy) (vector-ref enemy 1))
+(define (enemy-get-y enemy) (vector-ref enemy 2))
 
 ;; Main game loop
 (define (main-loop)
@@ -96,25 +105,37 @@
 
 
 	;; enemy position
-	(for-each (lambda (enemy-train)
-		    (let ((direction (vector-ref enemy-train 1)))
+	(for-each (lambda (enemy)
+		    (let ((direction (vector-ref enemy 0))
+			  (e-x (vector-ref enemy 1))
+			  (e-y (vector-ref enemy 2)))
 		      (cond
-		       ((= DIRECTION-L direction) (vector-set! enemy-train 2 (- (vector-ref enemy-train 2) 1)))
-		       ((= DIRECTION-R direction) (vector-set! enemy-train 2 (+ (vector-ref enemy-train 2) 1))))
-		      (let* ((new-pos (list (vector-ref enemy-train 2) (vector-ref enemy-train 3)))
-			     (new-pos-in-grid (pos-to-grid new-pos)))
-			(if (= CELL-MUSHROOM (array-ref grid-data (car new-pos-in-grid) (cadr new-pos-in-grid)))
-					; We have encountered a mushroom, change direction
+		       ((= DIRECTION-L direction) (vector-set! enemy 1 (- e-x 5)))
+		       ((= DIRECTION-R direction) (vector-set! enemy 1 (+ e-x 5))))
+		      (let* ((new-pos (list (vector-ref enemy 1) (vector-ref enemy 2)))
+			     (new-pos-grid (pos-to-grid new-pos))
+			     (grid-x (car new-pos-grid))
+			     (grid-y (cadr new-pos-grid)))
+			(cond
+		
+			 ((> grid-x grid-width)
+			  (begin
+			      (display "R BOUNDS ")
+			      (vector-set! enemy 2 (+ 16 e-y))
+			      (vector-set! enemy 0 DIRECTION-L)))
+			 ((< grid-x 0)
+			  (begin
+			    (display "L BOUNDS ")
+			    (vector-set! enemy 2 (+ 16 e-y))
+			    (vector-set! enemy 0 DIRECTION-R)))
+			 ((= CELL-MUSHROOM (array-ref grid-data grid-x grid-y))
 			    (begin
 			      (display "HIT! ")
-			      (display new-pos-in-grid)
-			      (newline)
-			      (vector-set! enemy-train 3 (+ 16 (vector-ref enemy-train 3)))
-			      (vector-set! enemy-train 1 (opposite-direction direction)))))))
-		  enemy-trains)
-
-	(display enemy-trains)
-	
+			      (vector-set! enemy 2 (+ 16 e-y))
+			      (vector-set! enemy 0 (opposite-direction direction))))))))
+			
+		  enemies)
+			
         ;; Draw
         (BeginDrawing)
         (ClearBackground BLACK)
@@ -127,20 +148,19 @@
 	;; draw grid - mushrooms
 	(for-each (lambda (row)
 		    (for-each (lambda (col)
-				(let ((posy (* row 16))
-				      (posx (* col 16)))
+				(let ((x (* col 16))
+				      (y (* row 16)))
 				  (if (= (array-ref grid-data row col) CELL-MUSHROOM)
-				      (DrawTexture mushtex posx posy WHITE))))
-				      ;(DrawTexture enemytex posx posy WHITE))))
-                      (iota grid-width)))
-        (iota grid-height))
+				      (DrawTexture mushtex x y WHITE))))
+			      (iota grid-width)))
+		  (iota grid-height))
 
 	;; enemies
-	(for-each (lambda (enemy-train)
-		    (for-each (lambda (enemy)
-				(DrawTexture enemytex (+ (vector-ref enemy-train 2) (* enemy 16)) (vector-ref enemy-train 3) WHITE ))
-		    (iota (vector-ref enemy-train 0))))
-		  enemy-trains)
+	(for-each (lambda (enemy)
+		    (let ((e-x (vector-ref enemy 1))
+			  (e-y (vector-ref enemy 2)))
+		      (DrawTexture enemytex e-x e-y WHITE)))
+		  enemies)
 	(EndDrawing)
 
         ;; Recursively call the main loop
