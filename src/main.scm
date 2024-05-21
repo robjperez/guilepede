@@ -40,6 +40,8 @@
 (define grid-height 45)
 (define grid-data (make-array CELL-EMPTY grid-height grid-width))
 
+(define score 0)
+
 ;; Utilities
 (define (pos-to-grid pos)
   (list
@@ -50,6 +52,23 @@
   (cond
    ((= dir DIRECTION-L) DIRECTION-R)
    ((= dir DIRECTION-R) DIRECTION-L)))
+
+(define (rectangles-collide? rect1 rect2 width)
+  (let* ((x1 (car rect1))
+         (y1 (cadr rect1))
+         (x2 (car rect2))
+         (y2 (cadr rect2))
+         (x1-max (+ x1 width))
+         (y1-max (+ y1 width))
+         (x2-max (+ x2 width))
+         (y2-max (+ y2 width)))
+    (not (or (< x1-max x2)    ;; rect1 is to the left of rect2
+             (< x2-max x1)    ;; rect2 is to the left of rect1
+             (< y1-max y2)    ;; rect1 is below rect2
+             (< y2-max y1))))) ;; rect2 is below rect1
+
+(define (add-score points)
+  (set! score (+ score points)))
 
 ;; Fill the grid with random mushrooms
 (define (generate-random-positions total-cells num-positions)
@@ -73,11 +92,15 @@
 ;; Define enemies
 (define enemies
   (list
+   (vector DIRECTION-R 250 0)
+   (vector DIRECTION-R 266 0)
+   (vector DIRECTION-R 282 0)
+   (vector DIRECTION-R 298 0)
    (vector DIRECTION-R 0 0)
-   (vector DIRECTION-R 16 0)
-   (vector DIRECTION-R 32 0)
-   (vector DIRECTION-R 48 0)
-   (vector DIRECTION-R 64 0)))
+   (vector DIRECTION-L 0 0)
+   (vector DIRECTION-L 16 16)
+   (vector DIRECTION-L 32 16)
+   (vector DIRECTION-L 48 16)))
 
 (define (enemy-get-x enemy) (vector-ref enemy 1))
 (define (enemy-get-y enemy) (vector-ref enemy 2))
@@ -112,7 +135,8 @@
 		  (set! player-fire-active #f)) ;Remove fire when goes out of screen
 		 ((= CELL-MUSHROOM (array-ref grid-data grid-y grid-x))
 		  (array-set! grid-data CELL-EMPTY grid-y grid-x)
-		  (set! player-fire-active #f)) ; Check collision with mushrooms		
+		  (set! player-fire-active #f)
+		  (add-score 50)) ; Check collision with mushrooms		 
 		 ))))
 
 
@@ -131,22 +155,34 @@
 			(cond
 			 ((> grid-x (- grid-width 2))
 			  (begin
-			      (display "R BOUNDS\n")
+			      ;(display "R BOUNDS\n")
 			      (vector-set! enemy 2 (+ 16 e-y))
 			      (vector-set! enemy 0 DIRECTION-L)))
 			 ((< grid-x 0)
 			  (begin
-			    (format #t "L BOUNDS\n")
+			    ;(format #t "L BOUNDS\n")
 			    (vector-set! enemy 2 (+ 16 e-y))
 			    (vector-set! enemy 0 DIRECTION-R)))
 			 ((= CELL-MUSHROOM (array-ref grid-data grid-y grid-x))
 			  (begin
-			    (format #t "HIT! ~d, ~d\n" grid-x grid-y)
+			    ;(format #t "HIT! ~d, ~d\n" grid-x grid-y)
 			    (vector-set! enemy 2 (+ 16 e-y))
 			    (vector-set! enemy 0 (opposite-direction direction))))))))
 			
 		  enemies)
-			
+	
+	;; Fire collision with enemies
+	(set! enemies (filter (lambda (enemy)
+				(if (rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-fire-position 16)
+				    (begin
+				      (add-score 100)
+					; Dead enemies convert into a mushroom
+				      (let ((dead-enemy-grid (pos-to-grid (list (enemy-get-x enemy) (enemy-get-y enemy)))))
+					(array-set! grid-data CELL-MUSHROOM (cadr dead-enemy-grid) (car dead-enemy-grid)))
+				      #f)
+				    #t))
+			      enemies))
+	
         ;; Draw
         (BeginDrawing)
         (ClearBackground BLACK)
@@ -172,8 +208,11 @@
 			  (e-y (vector-ref enemy 2)))
 		      (DrawTexture enemytex e-x e-y WHITE)))
 		  enemies)
-	(EndDrawing)
 
+	;; Hud
+	(DrawText (format #f "~6,'0d" score) 0 0 28 WHITE)
+	(EndDrawing)
+	
         ;; Recursively call the main loop
         (main-loop))))
 
