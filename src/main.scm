@@ -10,6 +10,8 @@
 (define DIRECTION-R 3)
 
 ;; Initialization
+(set! *random-state* (random-state-from-platform))
+
 (define screen-width 512)
 (define screen-height 720)
 
@@ -75,7 +77,7 @@
   (let loop ((positions '()))
     (if (= (length positions) num-positions)
         positions
-        (let ((new-pos (random-integer total-cells)))
+        (let ((new-pos (random total-cells)))
           (if (member new-pos positions)
               (loop positions)
               (loop (cons new-pos positions)))))))
@@ -90,26 +92,51 @@
           random-positions)
 
 ;; Define enemies
-(define enemies
-  (list
-   (vector DIRECTION-R 250 0)
-   (vector DIRECTION-R 266 0)
-   (vector DIRECTION-R 282 0)
-   (vector DIRECTION-R 298 0)
-   (vector DIRECTION-R 0 0)
-   (vector DIRECTION-L 0 0)
-   (vector DIRECTION-L 16 16)
-   (vector DIRECTION-L 32 16)
-   (vector DIRECTION-L 48 16)))
+(define (make-enemies2 blocks)
+  (let ((enemies (list)))
+    (for-each (lambda (block-index)
+		(format #t "bi: ~d\n" block-index)
+		(let ((number-of-enemies (random 8))
+		      (direction (+ 2 (random 1)))
+		      (start-x (random screen-width)))
+		  (format #t "ne: ~d, dir: ~d, x: ~d\n" number-of-enemies direction start-x)
+		  (for-each (lambda (index)
+			      (append enemies (list (vector direction start-x 0)))
+			      (display enemies)
+			      (newline))
+			    (iota number-of-enemies))		  
+		  ))
+	      (iota blocks))
+    enemies
+    ))
 
+(define (make-enemies blocks)
+  (apply append (map (lambda (block-index)
+		       (let ((number-of-enemies (random 5))
+			     (start-x (random screen-width))
+			     (start-y (* 16 (random 2)))
+			     (direction (+ 2 (random 1))))
+			 (map (lambda (index)
+				(vector direction (+ (* 16 index) start-x) start-y))
+			      (iota number-of-enemies))))
+		     (iota blocks))))
+
+(define enemies (make-enemies 10))
 (define (enemy-get-x enemy) (vector-ref enemy 1))
 (define (enemy-get-y enemy) (vector-ref enemy 2))
-
+(define level-completed #f)
+(define level 1)
+(define lives 4)
 ;; Main game loop
 (define (main-loop)
   (if (not (WindowShouldClose)) ; Detect window close button or ESC key
       (begin
         ;; Update
+	(if (= (length enemies) 0)
+	    (begin
+	      (set! level (+ 1 level))
+	      (set! enemies (make-enemies (* 3 level)))))
+	
 	;; Player pos
         (let ((dx (cond ((IsKeyDown KEY_RIGHT) player-speed)
                         ((IsKeyDown KEY_LEFT) (- player-speed))
@@ -171,16 +198,20 @@
 			
 		  enemies)
 	
-	;; Fire collision with enemies
+	;; Fire collision with enemies and player
 	(set! enemies (filter (lambda (enemy)
-				(if (rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-fire-position 16)
-				    (begin
-				      (add-score 100)
-					; Dead enemies convert into a mushroom
-				      (let ((dead-enemy-grid (pos-to-grid (list (enemy-get-x enemy) (enemy-get-y enemy)))))
-					(array-set! grid-data CELL-MUSHROOM (cadr dead-enemy-grid) (car dead-enemy-grid)))
-				      #f)
-				    #t))
+				(cond
+				 ((rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-fire-position 16) 
+				  (add-score 100)
+				  ; Dead enemies convert into a mushroom
+				  (let ((dead-enemy-grid (pos-to-grid (list (enemy-get-x enemy) (enemy-get-y enemy)))))
+				    (array-set! grid-data CELL-MUSHROOM (cadr dead-enemy-grid) (car dead-enemy-grid)))
+				  #f)
+				 ((rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-position 16)
+				  (set! lives (- lives 1))
+				  (set! player-position '(0 600))
+				  #t)
+				 (else #t)))
 			      enemies))
 	
         ;; Draw
@@ -211,6 +242,8 @@
 
 	;; Hud
 	(DrawText (format #f "~6,'0d" score) 0 0 28 WHITE)
+	(DrawText (format #f "Level: ~d" level) (- (/ screen-width 2) 50) 0 28 WHITE)
+	(DrawText (format #f "~d" lives) (- screen-width 30) 0 28 WHITE)
 	(EndDrawing)
 	
         ;; Recursively call the main loop
