@@ -144,7 +144,7 @@
 		     (grid-y (cadr new-pos-grid)))
 		(cond
 		 ((< (cadr player-fire-position) 0)
-		  (set! player-fire-active #f)) ;Remove fire when goes out of screen
+		  (set! player-fire-active #f)) ; Remove fire when goes out of screen
 		 ((= CELL-MUSHROOM (array-ref grid-data grid-y grid-x))
 		  (array-set! grid-data CELL-EMPTY grid-y grid-x)
 		  (set! player-fire-active #f)
@@ -167,43 +167,50 @@
 			(cond
 			 ((> grid-x (- grid-width 2))
 			  (begin
-			      ;(display "R BOUNDS\n")
 			      (vector-set! enemy 2 (+ sprite-size e-y))
 			      (vector-set! enemy 0 DIRECTION-L)))
 			 ((< grid-x 0)
 			  (begin
-			    ;(format #t "L BOUNDS\n")
 			    (vector-set! enemy 2 (+ sprite-size e-y))
 			    (vector-set! enemy 0 DIRECTION-R)))
 			 ((= CELL-MUSHROOM (array-ref grid-data grid-y grid-x))
 			  (begin
-			    ;(format #t "HIT! ~d, ~d\n" grid-x grid-y)
 			    (vector-set! enemy 2 (+ sprite-size e-y))
 			    (vector-set! enemy 0 (opposite-direction direction))))))))
 			
 		  enemies)
 	
 	;; Fire collision with enemies and player
-	(set! enemies (filter (lambda (enemy)
-				(cond
-				 ((rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-fire-position sprite-size) 
-				  (add-score 100)
-				  ; Dead enemies convert into a mushroom
-				  (let ((dead-enemy-grid (pos-to-grid (list (enemy-get-x enemy) (enemy-get-y enemy)))))
-				    (array-set! grid-data CELL-MUSHROOM (cadr dead-enemy-grid) (car dead-enemy-grid)))
-				  #f)
-				 ((rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-position sprite-size)
-				  (set! lives (- lives 1))
-				  (set! player-position '(0 600))
-				  #t)
-				 (else #t)))
-			      enemies))
+	(set!
+	 enemies
+	 (filter
+	  (lambda (enemy)
+	    (cond
+	     ((rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-fire-position sprite-size) 
+	      (add-score 100)
+	      ;; Dead enemies convert into a mushroom
+	      (let ((dead-enemy-grid (pos-to-grid (list (enemy-get-x enemy) (enemy-get-y enemy)))))
+		(array-set! grid-data CELL-MUSHROOM (cadr dead-enemy-grid) (car dead-enemy-grid)))
+	      #f)
+	     ((rectangles-collide? (list (enemy-get-x enemy) (enemy-get-y enemy)) player-position sprite-size)
+	      (set! lives (- lives 1))
+	      (set! player-position '(0 600))
+	      #t)
+	     (else #t)))
+	  enemies))
 	
         ;; Draw
         (BeginDrawing)
-        (ClearBackground BLACK)
+	
+	;; Draw background
+        (ClearBackground (make-Color 30 30 30 255))
+	(DrawRectangle 0 (- screen-height player-movement-area)
+		       screen-width player-movement-area
+		       (make-Color 50 40 50 255))
+
 	;; player
 	(DrawTexture shiptex (car player-position) (cadr player-position) WHITE)
+
 	;; fire
 	(if player-fire-active
 	    (DrawTexture firetex (car player-fire-position) (cadr player-fire-position) WHITE))
