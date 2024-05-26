@@ -51,7 +51,7 @@
 (define firetex (LoadTexture "./assets/fire24.png"))
 (define enemytex (LoadTexture "./assets/enemy24.png"))
 (define mushtex (LoadTexture "./assets/mushroom24.png"))
-
+(define titletex (LoadTexture "./assets/title.png"))
 
 (define grid-data (make-array CELL-EMPTY grid-height grid-width))
 
@@ -151,10 +151,12 @@
   
   (DrawText "Welcome to GuilePede\n" 50 100 24 WHITE)
   (DrawText "Use cursors to move and Z to fire\n" 50 130 24 WHITE)
-  (DrawText "Press Fire to start\n" 50 160 24 WHITE)
 
-  (DrawText "Developed for Spring Lisp Game Jam 2014" 50 400 18 WHITE)
-  (DrawText "By robjperez / @hylian" 50 420 18 WHITE)
+  (DrawTexture titletex 50 190 WHITE)
+  
+  (DrawText "Press Fire to start\n" 50 530 24 WHITE)
+  (DrawText "Developed for Spring Lisp Game Jam 2014" 50 580 18 WHITE)
+  (DrawText "By robjperez / @hylian" 50 600 18 WHITE)
 
   (EndDrawing))
 
