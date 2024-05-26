@@ -25,7 +25,7 @@
 (define screen-height (* sprite-size grid-height))
 (define player-movement-area (* 5 sprite-size))
 
-(InitWindow screen-width screen-height "Basic Game Loop with Raylib")
+(InitWindow screen-width screen-height "GuilePede")
 (SetTargetFPS 60) ; Set our game to run at 60 frames-per-second
 
 ;; Define a player object
@@ -149,9 +149,12 @@
   (BeginDrawing)
   (ClearBackground (make-Color 30 30 30 255))
   
-  (DrawText "Welcome to the game\n" 50 100 24 WHITE)
+  (DrawText "Welcome to GuilePede\n" 50 100 24 WHITE)
   (DrawText "Use cursors to move and Z to fire\n" 50 130 24 WHITE)
   (DrawText "Press Fire to start\n" 50 160 24 WHITE)
+
+  (DrawText "Developed for Spring Lisp Game Jam 2014" 50 400 18 WHITE)
+  (DrawText "By robjperez / @hylian" 50 420 18 WHITE)
 
   (EndDrawing))
 
