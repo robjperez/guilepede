@@ -89,6 +89,8 @@
 (define (enemy-get-x enemy) (vector-ref enemy 1))
 (define (enemy-get-y enemy) (vector-ref enemy 2))
 
+(define (clamp-mushroom-gridx posx)  
+  (clamp posx 3 (- grid-width 3)))
 
 ;; Functions for create enemies and mushrooms
 (define (clear-mushrooms)
@@ -96,19 +98,22 @@
 
 (define (make-mushrooms count)
   (for-each (lambda (idx)
-	      (let ((grid-x (random grid-width))
-		    (grid-y (random (- grid-height 5))))
+	      (let ((grid-x (clamp-mushroom-gridx (random grid-width)))
+		    (grid-y (max (random (- grid-height 5)) 3)))
 		(array-set! grid-data CELL-MUSHROOM grid-y grid-x)))
 	    (iota count)))
 
 (define (make-enemies blocks)
   (apply append (map (lambda (block-index)
 		       (let ((number-of-enemies (random 5))
-			     (start-x (random screen-width))
-			     (start-y (* sprite-size (random 2)))
+			     (start-grid-x (random grid-width))
+			     (start-grid-y (random 3))
 			     (direction (+ 2 (random 1))))
 			 (map (lambda (index)
-				(vector direction (+ (* sprite-size index) start-x) start-y))
+				(let
+				    ((pos-x (+ start-grid-x index))
+				     (pos-y start-grid-y))				  
+				  (vector direction (* sprite-size pos-x) (* sprite-size pos-y))))
 			      (iota number-of-enemies))))
 		     (iota blocks))))
 
@@ -144,9 +149,9 @@
   (BeginDrawing)
   (ClearBackground (make-Color 30 30 30 255))
   
-  (DrawText "Welcome to the game\n" 100 100 24 WHITE)
-  (DrawText "Use cursors to move and Z to fire\n" 500 140 24 WHITE)
-  (DrawText "Press Z to start\n" 100 160 24 WHITE)
+  (DrawText "Welcome to the game\n" 50 100 24 WHITE)
+  (DrawText "Use cursors to move and Z to fire\n" 50 130 24 WHITE)
+  (DrawText "Press Fire to start\n" 50 160 24 WHITE)
 
   (EndDrawing))
 
@@ -225,7 +230,7 @@
 		       (vector-set! enemy 2 (+ sprite-size e-y))
 		       (vector-set! enemy 0 DIRECTION-R))
 		      ((> (cadr new-pos) screen-height)
-		       (vector-set! enemy 2 0))
+		       (vector-set! enemy 2 24))
 		      ((= CELL-MUSHROOM (array-ref grid-data grid-y grid-x))
 		       (vector-set! enemy 2 (+ sprite-size e-y))
 		       (vector-set! enemy 0 (opposite-direction direction)))))))
@@ -249,7 +254,7 @@
 	   (if (= lives 0)
 	       (begin
 		 (set! game-scene-state SCENE-GAMEOVER)
-		 (reset-ui-counter 500))
+		 (reset-ui-counter 300))
 	       (set! game-scene-state SCENE-LIFELOST))
 	   (return)
 	   #t)
